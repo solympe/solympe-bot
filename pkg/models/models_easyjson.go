@@ -301,14 +301,16 @@ func easyjsonD2b7633eDecodeGithubComSolympeSolympeBotPkgModels3(in *jlexer.Lexer
 			continue
 		}
 		switch key {
-		case "id":
+		case "message_id":
 			out.ID = int(in.Int())
+		case "from":
+			(out.User).UnmarshalEasyJSON(in)
+		case "date":
+			out.Date = int(in.Int())
 		case "chat":
 			(out.Chat).UnmarshalEasyJSON(in)
 		case "text":
 			out.Text = string(in.String())
-		case "from":
-			(out.User).UnmarshalEasyJSON(in)
 		default:
 			in.SkipRecursive()
 		}
@@ -324,9 +326,19 @@ func easyjsonD2b7633eEncodeGithubComSolympeSolympeBotPkgModels3(out *jwriter.Wri
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"id\":"
+		const prefix string = ",\"message_id\":"
 		out.RawString(prefix[1:])
 		out.Int(int(in.ID))
+	}
+	{
+		const prefix string = ",\"from\":"
+		out.RawString(prefix)
+		(in.User).MarshalEasyJSON(out)
+	}
+	{
+		const prefix string = ",\"date\":"
+		out.RawString(prefix)
+		out.Int(int(in.Date))
 	}
 	{
 		const prefix string = ",\"chat\":"
@@ -337,11 +349,6 @@ func easyjsonD2b7633eEncodeGithubComSolympeSolympeBotPkgModels3(out *jwriter.Wri
 		const prefix string = ",\"text\":"
 		out.RawString(prefix)
 		out.String(string(in.Text))
-	}
-	{
-		const prefix string = ",\"from\":"
-		out.RawString(prefix)
-		(in.User).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }

@@ -1,18 +1,16 @@
 package handler
 
 import (
-	"log"
-
 	"github.com/solympe/solympe-bot/pkg/models"
 )
 
 type service interface {
-	Info(request models.Update) (err error)
+	Info(request models.Update)
 }
 
 // Handler ...
 type Handler interface {
-	Handle() ()
+	Handle()
 }
 
 type handler struct {
@@ -20,31 +18,21 @@ type handler struct {
 	service service
 }
 
-// messages
-const (
-	info = "/info@SolympeBot"
-)
-
 // Handle ...
-func (h *handler) Handle() () {
+func (h *handler) Handle() {
 	var update models.Update
 	for {
 		select {
 		case update = <-h.pull:
-			log.Println("recieved a message:", update)
 			h.handleMessage(update)
 		}
 	}
 }
 
 func (h *handler) handleMessage(update models.Update) {
-	var err error
 	switch update.Message.Text {
-	case info:
-		err = h.service.Info(update)
-		if err != nil {
-			log.Println(err)
-		}
+	case info, infoChat:
+		go h.service.Info(update)
 	}
 }
 

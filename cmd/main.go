@@ -2,14 +2,18 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+
 	"github.com/solympe/solympe-bot/pkg/handler"
+	blogger "github.com/solympe/solympe-bot/pkg/logger"
 	"github.com/solympe/solympe-bot/pkg/models"
+	receiver2 "github.com/solympe/solympe-bot/pkg/receiver"
 	"github.com/solympe/solympe-bot/pkg/responder"
 	"github.com/solympe/solympe-bot/pkg/service"
 	"github.com/solympe/solympe-bot/pkg/updater"
@@ -20,15 +24,18 @@ const (
 )
 
 func main() {
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller) // TODO level
+
 	// TODO-------------------------------------------
 	content, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Println("failed to read file", err)
+		_ = level.Error(logger).Log("failed to read config file")
 		return
 	}
 	lines := strings.Split(string(content), "\n")
 	if len(lines) < 2 {
-		log.Println("data error", err)
+		_ = level.Error(logger).Log("failed to get data from config file")
 		return
 	}
 	url := lines[0] + lines[1]
@@ -36,11 +43,13 @@ func main() {
 
 	messagePull := make(chan models.Update, 100)
 
+	botLogger := blogger.New(logger)
+
 	botResponder := responder.NewResponder(url)
-	botService := service.New(botResponder)
+	botService := service.New(botResponder, botLogger)
 	svcHandler := handler.NewHandler(messagePull, botService)
 	messageUpdater := updater.New(url)
-	receiver := handler.NewReceiver(messagePull, messageUpdater)
+	receiver := receiver2.NewReceiver(messagePull, messageUpdater, botLogger)
 
 	go receiver.WaitMessages()
 	go svcHandler.Handle()
@@ -49,7 +58,6 @@ func main() {
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 	defer func(sig os.Signal) {
 		close(messagePull)
-		log.Println("bye")
+		_ = level.Info(logger).Log("bye")
 	}(<-c)
-
 }

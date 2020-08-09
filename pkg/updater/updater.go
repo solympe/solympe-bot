@@ -1,7 +1,6 @@
 package updater
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -34,7 +33,7 @@ func (u *updater) GetUpdates(offset int) (updates models.UpdateResponse, err err
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(bytes, &updates)
+	err = updates.UnmarshalJSON(bytes)
 	if err != nil {
 		return
 	}
