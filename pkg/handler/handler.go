@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/solympe/solympe-bot/pkg/models"
 )
 
@@ -10,7 +12,7 @@ type service interface {
 
 // Handler ...
 type Handler interface {
-	Handle()
+	Handle(ctx context.Context)
 }
 
 type handler struct {
@@ -19,12 +21,18 @@ type handler struct {
 }
 
 // Handle ...
-func (h *handler) Handle() {
+func (h *handler) Handle(ctx context.Context) {
 	var update models.Update
 	for {
 		select {
 		case update = <-h.pull:
-			h.handleMessage(update)
+			go h.handleMessage(update)
+		case <-ctx.Done():
+			for msg := range h.pull {
+				go h.handleMessage(msg)
+			}
+			return
+
 		}
 	}
 }
@@ -32,7 +40,7 @@ func (h *handler) Handle() {
 func (h *handler) handleMessage(update models.Update) {
 	switch update.Message.Text {
 	case info, infoChat:
-		go h.service.Info(update)
+		h.service.Info(update)
 	}
 }
 

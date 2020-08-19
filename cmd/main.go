@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -27,19 +28,21 @@ func main() {
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller) // TODO level
 
-	// TODO-------------------------------------------
+	// TODO------------------------------------------- reading url and token from file
 	content, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		_ = level.Error(logger).Log("failed to read config file")
 		return
 	}
 	lines := strings.Split(string(content), "\n")
-	if len(lines) < 2 {
+	if len(lines) < 1 {
 		_ = level.Error(logger).Log("failed to get data from config file")
 		return
 	}
-	url := lines[0] + lines[1]
-	// TODO-------------------------------------------
+	url := lines[0]
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	messagePull := make(chan models.Update, 100)
 
@@ -52,11 +55,12 @@ func main() {
 	receiver := receiver2.NewReceiver(messagePull, messageUpdater, botLogger)
 
 	go receiver.WaitMessages()
-	go svcHandler.Handle()
+	go svcHandler.Handle(ctx)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 	defer func(sig os.Signal) {
+
 		close(messagePull)
 		_ = level.Info(logger).Log("bye")
 	}(<-c)
