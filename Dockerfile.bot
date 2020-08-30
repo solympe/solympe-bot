@@ -1,0 +1,19 @@
+FROM golang:1.11.4-alpine AS build
+
+RUN apk add --no-cache git make ffmpeg ca-certificates
+RUN go get -u golang.org/x/lint/golint
+RUN go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+
+ARG REPO
+WORKDIR /go/src/$REPO
+COPY ./cmd ./cmd
+COPY ./pkg ./pkg
+COPY ./vendor ./vendor
+
+ARG IMAGE_NAME
+RUN golangci-lint run -E gofmt -E golint -E vet -D errcheck
+RUN go test ./...
+RUN go build -v \
+    -o /out/service \
+    -ldflags "-extldflags "-static" -X main.serviceVersion=$VERSION" \
+    ./cmd/$IMAGE_NAME
